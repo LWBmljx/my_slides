@@ -4,14 +4,14 @@ import { ref } from 'vue'
 // Sample data: 8 bytes, 8 bits each
 // We'll use a simple pattern to make the transposition visible
 const input = ref([
-  [1, 0, 0, 0, 0, 0, 0, 0], // Byte 0: bit 0 is 1
-  [0, 1, 0, 0, 0, 0, 0, 0], // Byte 1: bit 1 is 1
-  [0, 0, 1, 0, 0, 0, 0, 0], // Byte 2: bit 2 is 1
-  [0, 0, 0, 1, 0, 0, 0, 0], // Byte 3: bit 3 is 1
-  [0, 0, 0, 0, 1, 0, 0, 0], // Byte 4: bit 4 is 1
-  [0, 0, 0, 0, 0, 1, 0, 0], // Byte 5: bit 5 is 1
-  [0, 0, 0, 0, 0, 0, 1, 0], // Byte 6: bit 6 is 1
-  [0, 0, 0, 0, 0, 0, 0, 1], // Byte 7: bit 7 is 1
+  [0, 1, 1, 0, 0, 0, 0, 1], // Byte 0: bit 0 is 1
+  [0, 1, 1, 0, 0, 0, 0, 1], // Byte 1: bit 1 is 1
+  [0, 1, 1, 0, 0, 0, 0, 1], // Byte 2: bit 2 is 1
+  [0, 1, 1, 0, 0, 0, 0, 1], // Byte 3: bit 3 is 1
+  [0, 1, 1, 0, 0, 0, 0, 1], // Byte 4: bit 4 is 1
+  [0, 1, 1, 0, 0, 0, 0, 1], // Byte 5: bit 5 is 1
+  [0, 1, 1, 0, 0, 0, 0, 1], // Byte 6: bit 6 is 1
+  [0, 1, 1, 0, 0, 0, 0, 1], // Byte 7: bit 7 is 1
 ])
 
 // Initialize output with null/0
