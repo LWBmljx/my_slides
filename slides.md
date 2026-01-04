@@ -67,16 +67,16 @@ layout: default
 
 Using `strings` to find the offset of the error message.
 
-```bash {all|2|3}
+```bash {all|3|2}
 lwb@DESKTOP-JNTORIG ~/cyptro$ strings -tx babyre > babyre.txt    
+   2004 CORRECT PASSWORD
    2017 INCORRECT PASSWORD
    202a ENTER PASSWORD
-   2039 LOGIN
 ```
 
 <v-click>
 
-- String `INCORRECT PASSWORD` found at offset `0x2017`
+- String `CORRECT PASSWORD` found at offset `0x2017`
 - We can use this offset to locate the code referencing it.
 
 </v-click>
@@ -87,12 +87,12 @@ layout: two-cols
 
 # Locating the Logic
 
-Locating the code that references `0x2017`.
+Locating the code that references `0x2004`.
 
 <v-click>
 
 ```asm {all|1|3-4|10}
-162c: call   1560 <usleep@plt+0x1b0>  # Check password
+162c: call   1560 <usleep@plt+0x1b0>  # Check password function
 1631: xor    %edx,%edx
 1633: test   %rax,%rax                # Check result
 1636: jne    1678                     # Jump if fail
@@ -111,12 +111,16 @@ Locating the code that references `0x2017`.
 
 <v-click>
 
-### Analysis
+### Investigation Process
 
-1.  **Line 162c**: Calls a function (likely the check).
-2.  **Line 1633**: Checks the return value (`rax`).
-3.  **Line 1636**: Jumps to failure path if not zero (or zero, depending on logic).
-4.  **Line 164e**: Loads the "INCORRECT PASSWORD" string.
+1.  **Target**: We know the string is at offset `0x2004`.
+2.  **Disassembly**: Use `objdump -d babyre` to dump the code.
+3.  **Search**: Search for the address `2004` in the output.
+    - We locate the code block referencing this memory area.
+4.  **Backtracking**:
+    - We look up to see how we got here.
+    - The jump at `1636` leads to this failure path.
+    - The `call` at `162c` must be the **Password Check Function**.
 
 </v-click>
 
@@ -162,8 +166,8 @@ Analyzing the transformation loop:
 1510: movzbl (%rax),%esi         # output[j]
 1513: mov    %r8d,%edx           # copy input[i]
 1516: add    $0x1,%rax           # j++
-151a: shr    %r8b                # input[i] >> 1
-151d: and    $0x1,%edx           # bit = (input[i] >> 1) & 1
+151a: shr    %r8b                # input[i] >> 1 (shift right for next j)
+151d: and    $0x1,%edx           # bit = (input[i] >> 0) & 1
 1520: shl    %cl,%edx            # bit << i
 1522: or     %esi,%edx           # output[j] | bit
 1524: mov    %dl,-0x1(%rax)      # Store back
@@ -177,10 +181,10 @@ Analyzing the transformation loop:
 
 <v-click>
 
-The code iterates through each byte of input (`i`) and each bit of that byte (`j` implied by loop).
+The code iterates through each byte of input (`i`) and each bit of that byte (`j` implied by the inner loop).
 
 It performs:
-$$ \text{output}[j] \ |= \ (\text{input}[i] \ \& \ 1) \ll i $$
+$$ \text{output}[j] \ |= \ ((\text{input}[i] \gg j) \ \& \ 1) \ll i $$
 
 </v-click>
 
@@ -202,31 +206,7 @@ This is a **Bit Matrix Transposition**.
 
 **Bit Matrix Transpose (8x8)**
 
-<div class="grid grid-cols-2 gap-10">
-
-<div>
-
-### Input (Byte $i$)
-Bit $j$ contributes to...
-
-```python
-input[i] = [b7, b6, ..., bj, ..., b0]
-```
-
-</div>
-
-<div>
-
-### Output (Byte $j$)
-...Bit $i$ of Output Byte $j$
-
-```python
-output[j] |= (input[i][j] << i)
-```
-
-</div>
-
-</div>
+<BitMatrix />
 
 <br>
 
@@ -264,6 +244,13 @@ def inverse_transform(output):
             # Put at bit j of input[i]
             input_bytes[i] |= (bit << j)
     return input_bytes
+
+# Apply to each 8-byte block
+def solve(data):
+    res = b''
+    for i in range(0, len(data), 8):
+        res += bytes(inverse_transform(data[i:i+8]))
+    return res
 ```
 
 </div>
@@ -296,7 +283,7 @@ target = bytes([
     0xd1, 0x40, 0xf2, 0xc4, 0x7b, 0xbf, 0x76, 0x00,
     0x87, 0x07, 0xd5, 0xad, 0xae, 0x82, 0xfd, 0x00
 ])
-print(inverse_transform_32bytes(target))
+print(solve(target))
 ```
 
 <v-click>
@@ -314,6 +301,20 @@ print(inverse_transform_32bytes(target))
 </div>
 
 </v-click>
+
+---
+
+# Key Takeaways
+
+<v-clicks>
+
+- **Static Analysis**: `strings` is powerful for finding entry points.
+- **Dynamic Analysis**: Running the binary gives context (error messages).
+- **Algorithm Identification**: Recognizing patterns (like bit manipulation loops) simplifies reverse engineering.
+- **Verification**: Testing hypotheses with known inputs (like "a"*32) is crucial.
+- **Inversion**: Many obfuscation techniques are reversible transformations.
+
+</v-clicks>
 
 ---
 class: text-center
