@@ -76,7 +76,7 @@ lwb@DESKTOP-JNTORIG ~/cyptro$ strings -tx babyre > babyre.txt
 
 <v-click>
 
-- String `CORRECT PASSWORD` found at offset `0x2017`
+- String `CORRECT PASSWORD` found at offset `0x2004`
 - We can use this offset to locate the code referencing it.
 
 </v-click>
