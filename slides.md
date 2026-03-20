@@ -160,17 +160,27 @@ layout: two-cols
 
 Analyzing the transformation loop:
 
-```asm {all|10|13-16}
-1500: movzbl (%rdi,%r10,1),%r8d  # input[i]
-...
-1510: movzbl (%rax),%esi         # output[j]
-1513: mov    %r8d,%edx           # copy input[i]
-1516: add    $0x1,%rax           # j++
-151a: shr    %r8b                # input[i] >> 1 (shift right for next j)
-151d: and    $0x1,%edx           # bit = (input[i] >> 0) & 1
-1520: shl    %cl,%edx            # bit << i
-1522: or     %esi,%edx           # output[j] | bit
-1524: mov    %dl,-0x1(%rax)      # Store back
+```asm {all|4-20|9-17}
+mov    %rsp,%r11                # save buffer address
+lea    0x8(%rsp),%r9
+nopl   (%rax)
+movzbl (%rdi,%r10,1),%r8d       # input[i] -> r8d
+mov    %r10d,%ecx
+mov    %r11,%rax                # get buffer address
+jmp    1513 <usleep@plt+0x163>
+nopl   (%rax)
+movzbl (%rax),%esi              # output[j] -> esi
+mov    %r8d,%edx                # input[i] -> edx
+add    $0x1,%rax                # j += 1
+shr    %r8b                     # input[i] >>= 1
+and    $0x1,%edx                # edx = (input[i] >> 1) & 1
+shl    %cl,%edx                 # edx = ((input[i] >> 1) & 1) << i
+or     %esi,%edx                # edx =(((input[i] >> 1) & 1) << i) | output[j]
+mov    %dl,-0x1(%rax)           # output[j-1] = ((((input[i] >> 1) & 1) << i) | output[j]) 
+cmp    %rax,%r9                 # (j < 8)?continue:leave
+jne    1510 <usleep@plt+0x160>
+add    $0x1,%r10                # i += 1
+cmp    $0x8,%r10                # (i < 8):continue:leave
 ```
 
 ::right::
